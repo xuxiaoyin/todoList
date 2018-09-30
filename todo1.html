@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+</head>
+<link rel="stylesheet" type="text/css" href="src/css/todo.css"/>
+<script src="src/vue.js" type="text/javascript" charset="utf-8"></script>
+<body>
+<div class="top">
+	<h1 id="title">任务计划列表</h1>
+</div>
+
+<div class="main">
+	<h3 class="big-title">添加任务</h3>
+	<input 
+		class="text" type="text" placeholder="例如：吃饭睡觉打豆豆；     提示：+回车即可添加任务"
+		v-model="todo"
+		v-on:keyup.13="addlist(todo)"
+	/>
+	<div class="conut" v-show="list.length">
+		<span>{{finishLength}}个任务未完成</span>
+		<div class="btn">
+			<a href="#all" v-bind:class="{active:visibility==='all'}">所有任务</a>
+			<a href="#unfinish" v-bind:class="{active:visibility==='unfinish'}">未完成的任务</a>
+			<a href="#finish" v-bind:class="{active:visibility==='finish'}">完成的任务</a>
+		</div>
+	</div>
+	
+	<h3 class="big-title">任务列表</h3>
+	<div class="task">
+		<span class="tip" v-show="!list.length">你还没有添加任何任务</span>
+		<ul class="todo-list">
+			<li
+				v-for="item in filterlist"
+			>
+				<div class="view"
+					v-bind:class="{hide:editTitle===item}"
+				>
+					<input 
+						type="checkbox" 
+						v-model="item.isChecked"
+					/>
+					<label 
+						v-bind:class="{finish:item.isChecked}"
+						v-on:dblclick="editlist(item)"
+					>
+						{{item.title}}
+					</label>
+					<button class="dele" v-on:click="dellist(item)">x</button>
+				</div>
+				<div class="edit"
+					v-bind:class="{hide:editTitle!=item}"
+				>
+					<input type="text"
+						v-model="item.title"
+						v-focus="editTitle===item"
+						v-on:blur="finshlist(item)"
+						v-on:keyup.enter="finshlist(item)"
+						v-on:keyup.esc='cancel(item)'
+					/>
+				</div>
+			</li>
+		</ul>
+	</div>
+</div>
+<script type="text/javascript">
+	var store={
+		save(key,value){
+			localStorage.setItem(key,JSON.stringify(value));
+		},
+		fetch(key){
+			return JSON.parse(localStorage.getItem(key))||[];		
+		}
+	};
+	
+	var filter={
+		all:function(list){
+			return list;
+		},
+		unfinish:function(list){
+			return list.filter(function(item){
+				return	!item.isChecked
+			});
+		},
+		finish:function(list){
+			return list.filter(function(item){
+				return	item.isChecked
+			});
+		}
+	}
+	
+	var list=store.fetch('mytodo');
+//	var list=[
+////		{
+////			title:'吃饭',
+////			isChecked:false
+////		},
+////		{
+////			title:'睡觉',
+////			isChecked:true
+////		}
+//	]
+	var vm=new Vue({
+		el:'.main',
+		data:{
+			list:list,
+			todo:'',
+			editTitle:'',
+			beforeTitle:'',
+			visibility:'all'
+		},
+		methods:{
+			addlist(todo){			 //添加列表
+				this.list.push({
+					title:todo,
+					isChecked:false
+				});
+				this.todo='';
+			},
+			editlist(todo){				//编辑列表
+				this.beforeTitle=todo.title;
+				this.editTitle=todo;
+			},
+			finshlist(todo){			//编辑成功
+				this.editTitle='';
+			},
+			cancel(todo){				//取消编辑
+				todo.title=this.beforeTitle;
+				this.editTitle='';
+				this.beforeTitle='';
+			},
+			dellist(todo){				//删除列表
+				var index=this.list.indexOf(todo);
+				this.list.splice(index,1);
+			}
+		},
+		directives:{
+			focus(el,binding){
+				if(binding.value){
+					el.focus();
+				}
+			}
+		},
+		computed:{
+			finishLength:function(){
+				return this.list.filter(function(item){
+					return !item.isChecked
+				}).length;
+			},
+			filterlist:function(){
+				return filter[this.visibility]?filter[this.visibility](list):list;
+			}
+		},
+		watch:{
+//			list:function(){
+//				store.save('mytodo',this.list)
+//			}
+			list:{
+				handler:function(){
+					store.save('mytodo',this.list)
+				},
+				deep:true
+			}
+		}
+	});
+	
+	function watchHash(){
+		var hash=window.location.hash.slice(1);
+		vm.visibility=hash;
+	}
+	
+	watchHash();
+	window.addEventListener('hashchange',watchHash);
+</script>
+</body>
+</html>
